@@ -2,7 +2,6 @@ package jp.techacademy.takashi.sasaki.qa_app;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -15,15 +14,10 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 
 public class QuestionDetailActivity extends AppCompatActivity {
@@ -36,9 +30,19 @@ public class QuestionDetailActivity extends AppCompatActivity {
 
     private QuestionDetailListAdapter questionDetailListAdapter;
 
-    private DatabaseReference databaseReference;
+    private DatabaseReference reference;
 
-    private DatabaseReference answerDatabaseReference;
+    private DatabaseReference answersReference;
+
+    private DatabaseReference favoritesReference;
+
+    private ChildEventListener favoritesEventListener = new DefaultChildEventListener() {
+        @Override
+        public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+            Log.d("QA_App", ":: FavoritesEventListener#onChildAdded ::::::::::::::::::::::");
+            favoriteToggleButton.setChecked(true);
+        }
+    };
 
     private CompoundButton.OnCheckedChangeListener favoriteCheckedChangeListener = new CompoundButton.OnCheckedChangeListener() {
         @Override
@@ -46,41 +50,20 @@ public class QuestionDetailActivity extends AppCompatActivity {
             Log.d("QA_App", ":: FavoriteCheckedChangeListener#onCheckedChanged :::::::::::");
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             if ((compoundButton.getId() == R.id.favoriteToggleButton) && user != null) {
-                String favoriteQuestionId = PreferenceManager.getDefaultSharedPreferences(getApplicationContext())
-                        .getString(Const.FAVORITE_QUESTIONS_KEY, "");
-
-                List<String> favoriteQuestionIds = new ArrayList<>();
-                if (!favoriteQuestionId.equals("")) {
-                    favoriteQuestionIds = new ArrayList<>(Arrays.asList(favoriteQuestionId.split(",")));
-                }
-
-                List<String> results = new ArrayList<>();
+                DatabaseReference favoriteReference = reference.child(Const.FAVORITE_PATH).child(user.getUid()).child(question.getQuestionUid());
+                favoriteReference.removeEventListener(favoritesEventListener);
                 if (isChecked) {
-                    favoriteQuestionIds.add(question.getQuestionUid());
-                    results = new ArrayList<>(new LinkedHashSet<>(favoriteQuestionIds));
+                    Map<String, String> data = new HashMap<>();
+                    data.put("genre", String.valueOf(question.getGenre()));
+                    favoriteReference.setValue(data);
                 } else {
-                    for (String id : favoriteQuestionIds) {
-                        if (!id.equals(question.getQuestionUid())) {
-                            results.add(id);
-                        }
-                    }
+                    favoriteReference.removeValue();
                 }
-
-                favoriteQuestionId = "";
-                for (int i = 0; i < results.size(); i++) {
-                    favoriteQuestionId += results.get(i);
-                    favoriteQuestionId += (i != results.size() - 1) ? "," : "";
-                }
-
-                DatabaseReference userReference = databaseReference.child(Const.FAVORITE_PATH).child(user.getUid());
-                Map<String, String> data = new HashMap<>();
-                data.put("questionId", favoriteQuestionId);
-                userReference.setValue(data);
             }
         }
     };
 
-    private ChildEventListener answersEventListener = new ChildEventListener() {
+    private ChildEventListener answersEventListener = new DefaultChildEventListener() {
         @Override
         public void onChildAdded(DataSnapshot dataSnapshot, String s) {
             HashMap map = (HashMap) dataSnapshot.getValue();
@@ -90,26 +73,9 @@ public class QuestionDetailActivity extends AppCompatActivity {
                     return;
                 }
             }
-            Answer answer = new Answer((String) map.get("body")
-                    , (String) map.get("name"), (String) map.get("uid"), answerUid);
+            Answer answer = new Answer((String) map.get("body"), (String) map.get("name"), (String) map.get("uid"), answerUid);
             question.getAnswers().add(answer);
             questionDetailListAdapter.notifyDataSetChanged();
-        }
-
-        @Override
-        public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-        }
-
-        @Override
-        public void onChildRemoved(DataSnapshot dataSnapshot) {
-        }
-
-        @Override
-        public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-        }
-
-        @Override
-        public void onCancelled(DatabaseError databaseError) {
         }
     };
 
@@ -119,9 +85,7 @@ public class QuestionDetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_question_detail);
 
-        Bundle extras = getIntent().getExtras();
-        question = (Question) extras.get("question");
-
+        question = (Question) getIntent().getExtras().get("question");
         setTitle(question.getTitle());
 
         listView = findViewById(R.id.listView);
@@ -131,12 +95,9 @@ public class QuestionDetailActivity extends AppCompatActivity {
 
         favoriteToggleButton = findViewById(R.id.favoriteToggleButton);
         favoriteToggleButton.setOnCheckedChangeListener(favoriteCheckedChangeListener);
-
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             favoriteToggleButton.setVisibility(View.GONE);
-        } else {
-            // TODO: 2018/12/16 お気に入り登録／未登録で文言を変化させる 
         }
 
         FloatingActionButton fab = findViewById(R.id.fab);
@@ -155,9 +116,17 @@ public class QuestionDetailActivity extends AppCompatActivity {
             }
         });
 
-        databaseReference = FirebaseDatabase.getInstance().getReference();
-        answerDatabaseReference = databaseReference.child(Const.CONTENTS_PATH)
-                .child(String.valueOf(question.getGenre())).child(question.getQuestionUid()).child(Const.ANSWERS_PATH);
-        answerDatabaseReference.addChildEventListener(answersEventListener);
+        reference = FirebaseDatabase.getInstance().getReference();
+        answersReference = reference.child(Const.CONTENTS_PATH).child(String.valueOf(question.getGenre())).child(question.getQuestionUid()).child(Const.ANSWERS_PATH);
+        answersReference.addChildEventListener(answersEventListener);
+
+        favoritesReference = reference.child(Const.FAVORITE_QUESTIONS_KEY).child(user.getUid()).child(question.getQuestionUid());
+        favoritesReference.addChildEventListener(favoritesEventListener);
+    }
+
+    @Override
+    protected void onResume() {
+        Log.d("QA_App", ":: QuestionDetailActivity#onResume ::::::::::::::::::::::::::");
+        super.onResume();
     }
 }

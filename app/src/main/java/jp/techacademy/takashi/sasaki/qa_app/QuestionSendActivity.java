@@ -157,6 +157,7 @@ public class QuestionSendActivity extends AppCompatActivity implements View.OnCl
             data.put("title", title);
             data.put("body", body);
             data.put("name", name);
+            data.put("genre", String.valueOf(genre));
 
             BitmapDrawable drawable = (BitmapDrawable) imageView.getDrawable();
             if (drawable != null) {

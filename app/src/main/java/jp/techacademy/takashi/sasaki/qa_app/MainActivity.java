@@ -2,7 +2,6 @@ package jp.techacademy.takashi.sasaki.qa_app;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
@@ -51,66 +50,30 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private ChildEventListener questionsEventListener = new ChildEventListener() {
         @Override
         public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-            Log.d("QA_App", ":: QuestionDatabaseEventListener#onChildAdded :::::::::::::::");
-            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-            if (genre == 0 && user != null) {
-                String favoriteQuestionId = PreferenceManager.getDefaultSharedPreferences(getApplicationContext())
-                        .getString(Const.FAVORITE_QUESTIONS_KEY, "");
-                if (!favoriteQuestionId.equals("")) {
-                    String[] favoriteQuestionIds = favoriteQuestionId.split(",");
-                    String questionId = (String) ((HashMap) dataSnapshot.getValue()).keySet().iterator().next();
-                    for (int i = 0; i < favoriteQuestionIds.length; i++) {
-                        if (questionId.equals(favoriteQuestionIds[i])) {
-                            HashMap question = (HashMap) ((HashMap) dataSnapshot.getValue()).get(questionId);
-                            String title = (String) question.get("title");
-                            String body = (String) question.get("body");
-                            String name = (String) question.get("name");
-                            String uid = (String) question.get("uid");
-                            String imageString = (String) question.get("image");
-                            byte[] bytes = (imageString != null) ? Base64.decode(imageString, Base64.DEFAULT) : new byte[0];
+            Log.d("QA_App", ":: QuestionsEventListener#onChildAdded ::::::::::::::::::::::");
 
-                            ArrayList<Answer> answers = new ArrayList<>();
-                            HashMap answer = (HashMap) question.get("answers");
-                            if (answer != null) {
-                                for (Object key : answer.keySet()) {
-                                    HashMap temp = (HashMap) answer.get(key);
-                                    String answerBody = (String) temp.get("body");
-                                    String answerName = (String) temp.get("name");
-                                    String answerUid = (String) temp.get("uid");
-                                    answers.add(new Answer(answerBody, answerName, answerUid, (String) key));
-                                }
-                            }
-                            Log.d("QA_App", "questionId:" + questionId);
+            HashMap question = (HashMap) dataSnapshot.getValue();
+            String title = (String) question.get("title");
+            String body = (String) question.get("body");
+            String name = (String) question.get("name");
+            String uid = (String) question.get("uid");
+            String imageString = (String) question.get("image");
+            byte[] bytes = (imageString != null) ? Base64.decode(imageString, Base64.DEFAULT) : new byte[0];
 
-                            questions.add(new Question(title, body, name, uid, questionId, genre, bytes, answers));
-                            questionsListAdapter.notifyDataSetChanged();
-                        }
-                    }
+            ArrayList<Answer> answers = new ArrayList<>();
+            HashMap answer = (HashMap) question.get("answers");
+            if (answer != null) {
+                for (Object key : answer.keySet()) {
+                    HashMap temp = (HashMap) answer.get(key);
+                    String answerBody = (String) temp.get("body");
+                    String answerName = (String) temp.get("name");
+                    String answerUid = (String) temp.get("uid");
+                    answers.add(new Answer(answerBody, answerName, answerUid, (String) key));
                 }
-            } else {
-                HashMap question = (HashMap) dataSnapshot.getValue();
-                String title = (String) question.get("title");
-                String body = (String) question.get("body");
-                String name = (String) question.get("name");
-                String uid = (String) question.get("uid");
-                String imageString = (String) question.get("image");
-                byte[] bytes = (imageString != null) ? Base64.decode(imageString, Base64.DEFAULT) : new byte[0];
-
-                ArrayList<Answer> answers = new ArrayList<>();
-                HashMap answer = (HashMap) question.get("answers");
-                if (answer != null) {
-                    for (Object key : answer.keySet()) {
-                        HashMap temp = (HashMap) answer.get(key);
-                        String answerBody = (String) temp.get("body");
-                        String answerName = (String) temp.get("name");
-                        String answerUid = (String) temp.get("uid");
-                        answers.add(new Answer(answerBody, answerName, answerUid, (String) key));
-                    }
-                }
-
-                questions.add(new Question(title, body, name, uid, dataSnapshot.getKey(), genre, bytes, answers));
-                questionsListAdapter.notifyDataSetChanged();
             }
+
+            questions.add(new Question(title, body, name, uid, dataSnapshot.getKey(), genre, bytes, answers));
+            questionsListAdapter.notifyDataSetChanged();
         }
 
         @Override
@@ -253,7 +216,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
 
         int id = item.getItemId();
-        if (id != R.id.navFavorite) {
+        if (id == R.id.navFavorite) {
+            Intent intent = new Intent(getApplicationContext(), FavoriteActivity.class);
+            startActivity(intent);
+        } else {
             if (id == R.id.navHobby) {
                 toolbar.setTitle("趣味");
                 genre = 1;
@@ -268,11 +234,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 genre = 4;
             }
             questionDatabaseReference = databaseReference.child(Const.CONTENTS_PATH).child(String.valueOf(genre));
-            questionDatabaseReference.addChildEventListener(questionsEventListener);
-        } else {
-            toolbar.setTitle("お気に入り");
-            genre = 0;
-            questionDatabaseReference = databaseReference.child(Const.CONTENTS_PATH);
             questionDatabaseReference.addChildEventListener(questionsEventListener);
         }
         return true;
