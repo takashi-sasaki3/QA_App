@@ -16,7 +16,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
-import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
@@ -60,13 +59,13 @@ public class QuestionSendActivity extends AppCompatActivity implements View.OnCl
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.d("QA_App", ":: QuestionSendActivity#onCreate ::::::::::::::::::::::::::::");
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_question_send);
+        setTitle("質問作成");
 
         Bundle extras = getIntent().getExtras();
         genre = extras.getInt("genre");
-
-        setTitle("質問作成");
 
         titleEditText = findViewById(R.id.titleEditText);
         bodyEditText = findViewById(R.id.bodyEditText);
@@ -84,6 +83,7 @@ public class QuestionSendActivity extends AppCompatActivity implements View.OnCl
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         Log.d("QA_App", ":: QuestionSendActivity#onActivityResult ::::::::::::::::::::");
+
         if (requestCode == CHOOSER_REQUEST_CODE) {
             if (resultCode != RESULT_OK) {
                 if (pictureUri != null) {
@@ -119,6 +119,7 @@ public class QuestionSendActivity extends AppCompatActivity implements View.OnCl
     @Override
     public void onClick(View view) {
         Log.d("QA_App", ":: QuestionSendActivity#onClick :::::::::::::::::::::::::::::");
+
         if (view == imageView) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
@@ -134,8 +135,8 @@ public class QuestionSendActivity extends AppCompatActivity implements View.OnCl
             InputMethodManager im = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
             im.hideSoftInputFromWindow(view.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
 
-            DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference();
-            DatabaseReference genreReference = databaseReference.child(Const.CONTENTS_PATH).child(String.valueOf(genre));
+            DatabaseReference reference = FirebaseDatabase.getInstance().getReference();
+            DatabaseReference genreReference = reference.child(Const.CONTENTS_PATH).child(String.valueOf(genre));
 
             Map<String, String> data = new HashMap<>();
             data.put("uid", FirebaseAuth.getInstance().getCurrentUser().getUid());
@@ -152,8 +153,8 @@ public class QuestionSendActivity extends AppCompatActivity implements View.OnCl
                 return;
             }
 
-            SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-            String name = sp.getString(Const.NAME_KEY, "");
+            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+            String name = preferences.getString(Const.NAME_KEY, "");
             data.put("title", title);
             data.put("body", body);
             data.put("name", name);
@@ -176,6 +177,7 @@ public class QuestionSendActivity extends AppCompatActivity implements View.OnCl
     @Override
     public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
         Log.d("QA_App", ":: QuestionSendActivity#onComplete ::::::::::::::::::::::::::");
+
         progress.dismiss();
         if (databaseError == null) {
             finish();
@@ -185,8 +187,9 @@ public class QuestionSendActivity extends AppCompatActivity implements View.OnCl
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         Log.d("QA_App", ":: QuestionSendActivity#onRequestPermissionsResult ::::::::::");
+
         switch (requestCode) {
             case PERMISSIONS_REQUEST_CODE: {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -199,6 +202,7 @@ public class QuestionSendActivity extends AppCompatActivity implements View.OnCl
 
     private void showChooser() {
         Log.d("QA_App", ":: QuestionSendActivity#showChooser :::::::::::::::::::::::::");
+
         Intent galleryIntent = new Intent(Intent.ACTION_GET_CONTENT);
         galleryIntent.setType("image/*");
         galleryIntent.addCategory(Intent.CATEGORY_OPENABLE);

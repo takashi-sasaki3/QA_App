@@ -61,15 +61,15 @@ public class AnswerSendActivity extends AppCompatActivity implements View.OnClic
         InputMethodManager im = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         im.hideSoftInputFromWindow(view.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
 
-        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference();
-        DatabaseReference answerDatabaseReference = databaseReference.child(Const.CONTENTS_PATH)
+        DatabaseReference reference = FirebaseDatabase.getInstance().getReference();
+        DatabaseReference answerReference = reference.child(Const.CONTENTS_PATH)
                 .child(String.valueOf(question.getGenre())).child(question.getQuestionUid()).child(Const.ANSWERS_PATH);
 
         Map<String, String> data = new HashMap<>();
         data.put("uid", FirebaseAuth.getInstance().getCurrentUser().getUid());
 
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        String name = sp.getString(Const.NAME_KEY, "");
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        String name = preferences.getString(Const.NAME_KEY, "");
         data.put("name", name);
 
         String answer = answerEditText.getText().toString();
@@ -80,6 +80,6 @@ public class AnswerSendActivity extends AppCompatActivity implements View.OnClic
         data.put("body", answer);
 
         progress.show();
-        answerDatabaseReference.push().setValue(data, this);
+        answerReference.push().setValue(data, this);
     }
 }

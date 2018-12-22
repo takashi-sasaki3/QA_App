@@ -48,6 +48,7 @@ public class QuestionDetailActivity extends AppCompatActivity {
         @Override
         public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
             Log.d("QA_App", ":: FavoriteCheckedChangeListener#onCheckedChanged :::::::::::");
+
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             if ((compoundButton.getId() == R.id.favoriteToggleButton) && user != null) {
                 DatabaseReference favoriteReference = reference.child(Const.FAVORITE_PATH).child(user.getUid()).child(question.getQuestionUid());
@@ -82,30 +83,27 @@ public class QuestionDetailActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.d("QA_App", ":: QuestionDetailActivity#onCreate ::::::::::::::::::::::::::");
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_question_detail);
 
         question = (Question) getIntent().getExtras().get("question");
         setTitle(question.getTitle());
 
-        listView = findViewById(R.id.listView);
         questionDetailListAdapter = new QuestionDetailListAdapter(this, question);
-        listView.setAdapter(questionDetailListAdapter);
         questionDetailListAdapter.notifyDataSetChanged();
+
+        listView = findViewById(R.id.listView);
+        listView.setAdapter(questionDetailListAdapter);
 
         favoriteToggleButton = findViewById(R.id.favoriteToggleButton);
         favoriteToggleButton.setOnCheckedChangeListener(favoriteCheckedChangeListener);
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
-            favoriteToggleButton.setVisibility(View.GONE);
-        }
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                if (user == null) {
+                if (FirebaseAuth.getInstance().getCurrentUser() == null) {
                     Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
                     startActivity(intent);
                 } else {
@@ -119,14 +117,21 @@ public class QuestionDetailActivity extends AppCompatActivity {
         reference = FirebaseDatabase.getInstance().getReference();
         answersReference = reference.child(Const.CONTENTS_PATH).child(String.valueOf(question.getGenre())).child(question.getQuestionUid()).child(Const.ANSWERS_PATH);
         answersReference.addChildEventListener(answersEventListener);
-
-        favoritesReference = reference.child(Const.FAVORITE_QUESTIONS_KEY).child(user.getUid()).child(question.getQuestionUid());
-        favoritesReference.addChildEventListener(favoritesEventListener);
     }
 
     @Override
     protected void onResume() {
         Log.d("QA_App", ":: QuestionDetailActivity#onResume ::::::::::::::::::::::::::");
+
         super.onResume();
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            favoriteToggleButton.setVisibility(View.GONE);
+        } else {
+            favoriteToggleButton.setVisibility(View.VISIBLE);
+            favoritesReference = reference.child(Const.FAVORITE_PATH).child(user.getUid()).child(question.getQuestionUid());
+            favoritesReference.addChildEventListener(favoritesEventListener);
+        }
     }
 }

@@ -22,7 +22,6 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -47,7 +46,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     private QuestionsListAdapter questionsListAdapter;
 
-    private ChildEventListener questionsEventListener = new ChildEventListener() {
+    private ChildEventListener questionsEventListener = new DefaultChildEventListener() {
         @Override
         public void onChildAdded(DataSnapshot dataSnapshot, String s) {
             Log.d("QA_App", ":: QuestionsEventListener#onChildAdded ::::::::::::::::::::::");
@@ -79,6 +78,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         @Override
         public void onChildChanged(DataSnapshot dataSnapshot, String s) {
             Log.d("QA_App", ":: MainActivity#onChildChanged ::::::::::::::::::::::::::::::");
+
             HashMap map = (HashMap) dataSnapshot.getValue();
             for (Question question : questions) {
                 if (dataSnapshot.getKey().equals(question.getQuestionUid())) {
@@ -97,23 +97,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 }
             }
         }
-
-        @Override
-        public void onChildRemoved(DataSnapshot dataSnapshot) {
-        }
-
-        @Override
-        public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-        }
-
-        @Override
-        public void onCancelled(DatabaseError databaseError) {
-        }
     };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.d("QA_App", ":: MainActivity#onCreate ::::::::::::::::::::::::::::::::::::");
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -140,6 +129,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
         });
 
+        databaseReference = FirebaseDatabase.getInstance().getReference();
+
         DrawerLayout drawer = findViewById(R.id.drawerLayout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawer, toolbar, R.string.app_name, R.string.app_name);
         drawer.addDrawerListener(toggle);
@@ -148,13 +139,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         navigationView = findViewById(R.id.navigationView);
         navigationView.setNavigationItemSelectedListener(this);
 
-        databaseReference = FirebaseDatabase.getInstance().getReference();
-
-        listView = findViewById(R.id.listView);
         questionsListAdapter = new QuestionsListAdapter(this);
-        questions = new ArrayList<Question>();
+        questions = new ArrayList<>();
         questionsListAdapter.notifyDataSetChanged();
 
+        listView = findViewById(R.id.listView);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -169,20 +158,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     protected void onResume() {
         Log.d("QA_App", ":: MainActivity#onResume ::::::::::::::::::::::::::::::::::::");
         Log.d("QA_App", "genre:" + genre);
+
         super.onResume();
-
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
-            navigationView.getMenu().findItem(R.id.navFavorite).setVisible(false);
-        } else {
-            navigationView.getMenu().findItem(R.id.navFavorite).setVisible(true);
-        }
-
-        if (genre == 0) {
-            onNavigationItemSelected(navigationView.getMenu().getItem(1));
-        } else {
-            onNavigationItemSelected(navigationView.getMenu().getItem(genre));
-        }
+        navigationView.getMenu().findItem(R.id.navFavorite).setVisible((FirebaseAuth.getInstance().getCurrentUser() == null) ? false : true);
+        onNavigationItemSelected(navigationView.getMenu().getItem((genre == 0) ? 1 : genre));
     }
 
     @Override
@@ -205,16 +184,17 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         Log.d("QA_App", ":: MainActivity#onNavigationItemSelected ::::::::::::::::::::");
+
         DrawerLayout drawer = findViewById(R.id.drawerLayout);
         drawer.closeDrawer(GravityCompat.START);
 
         questions.clear();
         questionsListAdapter.setQuestions(questions);
         listView.setAdapter(questionsListAdapter);
+
         if (questionDatabaseReference != null) {
             questionDatabaseReference.removeEventListener(questionsEventListener);
         }
-
         int id = item.getItemId();
         if (id == R.id.navFavorite) {
             Intent intent = new Intent(getApplicationContext(), FavoriteActivity.class);

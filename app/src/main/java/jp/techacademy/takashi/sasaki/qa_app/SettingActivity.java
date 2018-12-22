@@ -24,21 +24,16 @@ public class SettingActivity extends AppCompatActivity {
 
     private EditText nameEditText;
 
-    private DatabaseReference databaseReference;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.d("QA_App", ":: SettingActivity#onCreate :::::::::::::::::::::::::::::::::");
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_setting);
-
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        String name = preferences.getString(Const.NAME_KEY, "");
-        nameEditText = findViewById(R.id.nameEditText);
-        nameEditText.setText(name);
-
-        databaseReference = FirebaseDatabase.getInstance().getReference();
         setTitle("設定");
+
+        nameEditText = findViewById(R.id.nameEditText);
+        nameEditText.setText(PreferenceManager.getDefaultSharedPreferences(this).getString(Const.NAME_KEY, ""));
 
         Button changeButton = findViewById(R.id.changeButton);
         changeButton.setOnClickListener(new View.OnClickListener() {
@@ -54,13 +49,12 @@ public class SettingActivity extends AppCompatActivity {
                 }
 
                 String name = nameEditText.getText().toString();
-                DatabaseReference userReference = databaseReference.child(Const.USERS_PATH).child(user.getUid());
+                DatabaseReference userReference = FirebaseDatabase.getInstance().getReference().child(Const.USERS_PATH).child(user.getUid());
                 Map<String, String> data = new HashMap<>();
                 data.put("name", name);
                 userReference.setValue(data);
 
-                SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                SharedPreferences.Editor editor = sp.edit();
+                SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).edit();
                 editor.putString(Const.NAME_KEY, name);
                 editor.commit();
 
@@ -72,13 +66,10 @@ public class SettingActivity extends AppCompatActivity {
         logoutButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Log.d("QA_App", ":: OnLogoutClickListener#onClick ::::::::::::::::::::::::::::");
                 FirebaseAuth.getInstance().signOut();
                 nameEditText.setText("");
 
-                SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                SharedPreferences.Editor editor = sp.edit();
-                editor.putString(Const.FAVORITE_QUESTIONS_KEY, "");
+                SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).edit();
                 editor.putString(Const.NAME_KEY, "");
                 editor.commit();
 

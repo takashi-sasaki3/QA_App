@@ -10,7 +10,6 @@ import android.widget.AdapterView;
 import android.widget.ListView;
 
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
@@ -43,10 +42,6 @@ public class FavoriteActivity extends AppCompatActivity {
             questionsReference.addListenerForSingleValueEvent(new DefaultValueEventListener() {
                 @Override
                 public void onDataChange(DataSnapshot dataSnapshot) {
-                    Log.d("QA_App", ":: onDataChange :::::::::::::::::::::::::::::::::::::::::::::");
-                    //Log.d("QA_App", "key:" + dataSnapshot.getKey()); // -LTqFS2ZXYNNlvN64qSO
-                    //Log.d("QA_App", "value:" + dataSnapshot.getValue()); // {name=, answers={-LU9Bu6-dD5jHKPGC7n0={name=佐々木, uid=UB56iOhBkLYAtEbIZIznxuhHcTW2, body=生活の質問の回答}}, uid=UB56iOhBkLYAtEbIZIznxuhHcTW2, body=生活の質問, title=生活の質問, image=/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcU...}
-
                     HashMap question = (HashMap) dataSnapshot.getValue();
                     String title = (String) question.get("title");
                     String body = (String) question.get("body");
@@ -78,9 +73,12 @@ public class FavoriteActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.d("QA_App", ":: FavoriteActivity#onCreate ::::::::::::::::::::::::::::::::");
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_favorite);
         setTitle("お気に入り");
+
+        reference = FirebaseDatabase.getInstance().getReference();
 
         questionsListAdapter = new QuestionsListAdapter(this);
         questions = new ArrayList<>();
@@ -96,10 +94,21 @@ public class FavoriteActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+    }
 
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        reference = FirebaseDatabase.getInstance().getReference();
-        favoritesReference = reference.child(Const.FAVORITE_QUESTIONS_KEY).child(user.getUid());
+    @Override
+    protected void onResume() {
+        Log.d("QA_App", ":: FavoriteActivity#onResume ::::::::::::::::::::::::::::::::");
+
+        super.onResume();
+
+        questions.clear();
+        questionsListAdapter.setQuestions(questions);
+        listView.setAdapter(questionsListAdapter);
+        if (favoritesReference != null) {
+            favoritesReference.removeEventListener(favoritesEventListener);
+        }
+        favoritesReference = reference.child(Const.FAVORITE_PATH).child(FirebaseAuth.getInstance().getCurrentUser().getUid());
         favoritesReference.addChildEventListener(favoritesEventListener);
     }
 }

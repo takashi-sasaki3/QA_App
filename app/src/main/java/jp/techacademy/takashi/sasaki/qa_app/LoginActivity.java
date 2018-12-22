@@ -18,7 +18,6 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -40,55 +39,29 @@ public class LoginActivity extends AppCompatActivity {
 
     FirebaseAuth auth;
 
-    OnCompleteListener<AuthResult> createAccountListener;
+    OnCompleteListener<AuthResult> createAccountCompleteListener;
 
-    OnCompleteListener<AuthResult> loginListener;
+    OnCompleteListener<AuthResult> loginCompleteListener;
 
-    DatabaseReference databaseReference;
+    DatabaseReference reference;
 
     boolean isCreateAccount = false;
-
-    private ChildEventListener favoriteEventListener = new ChildEventListener() {
-        @Override
-        public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-            Log.d("QA_App", ":: FavoriteEventListener#onChildAdded :::::::::::::::::::::::");
-            Log.d("QA_App", "favoriteQuestionId:" + dataSnapshot.getValue().toString());
-
-            SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).edit();
-            editor.putString(Const.FAVORITE_QUESTIONS_KEY, dataSnapshot.getValue().toString());
-            editor.commit();
-        }
-
-        @Override
-        public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-        }
-
-        @Override
-        public void onChildRemoved(DataSnapshot dataSnapshot) {
-        }
-
-        @Override
-        public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-        }
-
-        @Override
-        public void onCancelled(DatabaseError databaseError) {
-        }
-    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.d("QA_App", ":: LoginActivity#onCreate :::::::::::::::::::::::::::::::::::");
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        databaseReference = FirebaseDatabase.getInstance().getReference();
+        reference = FirebaseDatabase.getInstance().getReference();
         auth = FirebaseAuth.getInstance();
 
-        createAccountListener = new OnCompleteListener<AuthResult>() {
+        createAccountCompleteListener = new OnCompleteListener<AuthResult>() {
             @Override
             public void onComplete(Task<AuthResult> task) {
                 Log.d("QA_App", ":: CreateAccountListener#onComplete :::::::::::::::::::::::::");
+
                 if (task.isSuccessful()) {
                     String email = emailEditText.getText().toString();
                     String password = passwordEditText.getText().toString();
@@ -101,13 +74,14 @@ public class LoginActivity extends AppCompatActivity {
             }
         };
 
-        loginListener = new OnCompleteListener<AuthResult>() {
+        loginCompleteListener = new OnCompleteListener<AuthResult>() {
             @Override
             public void onComplete(Task<AuthResult> task) {
                 Log.d("QA_App", ":: LoginListener#onComplete :::::::::::::::::::::::::::::::::");
+
                 if (task.isSuccessful()) {
                     FirebaseUser user = auth.getCurrentUser();
-                    DatabaseReference userReference = databaseReference.child(Const.USERS_PATH).child(user.getUid());
+                    DatabaseReference userReference = reference.child(Const.USERS_PATH).child(user.getUid());
                     if (isCreateAccount) {
                         String name = nameEditText.getText().toString();
                         Map<String, String> data = new HashMap<String, String>();
@@ -127,14 +101,12 @@ public class LoginActivity extends AppCompatActivity {
                             }
                         });
                     }
-                    Log.d("QA_App", "user id:" + user.getUid());
-                    databaseReference.child(Const.FAVORITE_PATH).child(user.getUid()).addChildEventListener(favoriteEventListener);
+                    progressDialog.dismiss();
+                    finish();
                 } else {
-                    View view = findViewById(android.R.id.content);
-                    Snackbar.make(view, "ログインに失敗しました", Snackbar.LENGTH_LONG).show();
+                    progressDialog.dismiss();
+                    Snackbar.make(findViewById(android.R.id.content), "ログインに失敗しました", Snackbar.LENGTH_LONG).show();
                 }
-                progressDialog.dismiss();
-                finish();
             }
         };
 
@@ -154,6 +126,7 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Log.d("QA_App", ":: createButton#onClick :::::::::::::::::::::::::::::::::::::");
+
                 InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                 inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
 
@@ -175,6 +148,7 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Log.d("QA_App", ":: loginButton#onClick ::::::::::::::::::::::::::::::::::::::");
+
                 InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                 inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
 
@@ -193,17 +167,17 @@ public class LoginActivity extends AppCompatActivity {
 
     private void createAccount(String email, String password) {
         progressDialog.show();
-        auth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(createAccountListener);
+        auth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(createAccountCompleteListener);
     }
 
     private void login(String email, String password) {
         progressDialog.show();
-        auth.signInWithEmailAndPassword(email, password).addOnCompleteListener(loginListener);
+        auth.signInWithEmailAndPassword(email, password).addOnCompleteListener(loginCompleteListener);
     }
 
     private void saveName(String name) {
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor editor = preferences.edit();
         editor.putString(Const.NAME_KEY, name);
         editor.commit();
     }
