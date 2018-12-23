@@ -10,6 +10,7 @@ import android.widget.AdapterView;
 import android.widget.ListView;
 
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
@@ -102,13 +103,19 @@ public class FavoriteActivity extends AppCompatActivity {
 
         super.onResume();
 
-        questions.clear();
-        questionsListAdapter.setQuestions(questions);
-        listView.setAdapter(questionsListAdapter);
-        if (favoritesReference != null) {
-            favoritesReference.removeEventListener(favoritesEventListener);
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+            startActivity(intent);
+        } else {
+            questions.clear();
+            questionsListAdapter.setQuestions(questions);
+            listView.setAdapter(questionsListAdapter);
+            if (favoritesReference != null) {
+                favoritesReference.removeEventListener(favoritesEventListener);
+            }
+            favoritesReference = reference.child(Const.FAVORITE_PATH).child(user.getUid());
+            favoritesReference.addChildEventListener(favoritesEventListener);
         }
-        favoritesReference = reference.child(Const.FAVORITE_PATH).child(FirebaseAuth.getInstance().getCurrentUser().getUid());
-        favoritesReference.addChildEventListener(favoritesEventListener);
     }
 }
