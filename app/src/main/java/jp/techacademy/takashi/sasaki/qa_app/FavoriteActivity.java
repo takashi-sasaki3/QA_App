@@ -39,35 +39,37 @@ public class FavoriteActivity extends AppCompatActivity {
             Log.d("QA_App", ":: FavoritesEventListener#onChildAdded ::::::::::::::::::::::");
 
             HashMap data = (HashMap) dataSnapshot.getValue(); // {genre=2}
-            questionsReference = reference.child(Const.CONTENTS_PATH).child((String) data.get("genre")).child(dataSnapshot.getKey()); // -LTqFS2ZXYNNlvN64qSO
-            questionsReference.addListenerForSingleValueEvent(new DefaultValueEventListener() {
-                @Override
-                public void onDataChange(DataSnapshot dataSnapshot) {
-                    HashMap question = (HashMap) dataSnapshot.getValue();
-                    String title = (String) question.get("title");
-                    String body = (String) question.get("body");
-                    String name = (String) question.get("name");
-                    String uid = (String) question.get("uid");
-                    String genre = (String) question.get("genre");
-                    String imageString = (String) question.get("image");
-                    byte[] bytes = (imageString != null) ? Base64.decode(imageString, Base64.DEFAULT) : new byte[0];
+            if (data != null) {
+                questionsReference = reference.child(Const.CONTENTS_PATH).child((String) data.get("genre")).child(dataSnapshot.getKey()); // -LTqFS2ZXYNNlvN64qSO
+                questionsReference.addListenerForSingleValueEvent(new DefaultValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        HashMap question = (HashMap) dataSnapshot.getValue();
+                        String title = (String) question.get("title");
+                        String body = (String) question.get("body");
+                        String name = (String) question.get("name");
+                        String uid = (String) question.get("uid");
+                        String genre = (String) question.get("genre");
+                        String imageString = (String) question.get("image");
+                        byte[] bytes = (imageString != null) ? Base64.decode(imageString, Base64.DEFAULT) : new byte[0];
 
-                    ArrayList<Answer> answers = new ArrayList<>();
-                    HashMap answer = (HashMap) question.get("answers");
-                    if (answer != null) {
-                        for (Object key : answer.keySet()) {
-                            HashMap temp = (HashMap) answer.get(key);
-                            String answerBody = (String) temp.get("body");
-                            String answerName = (String) temp.get("name");
-                            String answerUid = (String) temp.get("uid");
-                            answers.add(new Answer(answerBody, answerName, answerUid, (String) key));
+                        ArrayList<Answer> answers = new ArrayList<>();
+                        HashMap answer = (HashMap) question.get("answers");
+                        if (answer != null) {
+                            for (Object key : answer.keySet()) {
+                                HashMap temp = (HashMap) answer.get(key);
+                                String answerBody = (String) temp.get("body");
+                                String answerName = (String) temp.get("name");
+                                String answerUid = (String) temp.get("uid");
+                                answers.add(new Answer(answerBody, answerName, answerUid, (String) key));
+                            }
                         }
-                    }
 
-                    questions.add(new Question(title, body, name, uid, dataSnapshot.getKey(), Integer.valueOf(genre), bytes, answers));
-                    questionsListAdapter.notifyDataSetChanged();
-                }
-            });
+                        questions.add(new Question(title, body, name, uid, dataSnapshot.getKey(), Integer.valueOf(genre), bytes, answers));
+                        questionsListAdapter.notifyDataSetChanged();
+                    }
+                });
+            }
         }
     };
 
